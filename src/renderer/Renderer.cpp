@@ -3,7 +3,9 @@
 #include <iostream>
 #include <cmath>
 #include <cstring>
-#include <iostream>
+#include <fstream>
+#include <string>
+#include <cstddef>
 
 bool Renderer::initialize(SDL_Window *window)
 {
@@ -51,6 +53,12 @@ bool Renderer::initialize(SDL_Window *window)
     }
 
     if (!uploadQuad())
+    {
+        shutdown();
+        return false;
+    }
+
+    if (!createPipeline())
     {
         shutdown();
         return false;
@@ -121,6 +129,269 @@ bool Renderer::beginFrame(Color clearColor)
 void Renderer::setCamera(const Camera &camera)
 {
     camera_ = camera;
+}
+
+SDL_GPUShader *Renderer::loadShader(
+    const char *filename,
+    SDL_GPUShaderStage stage,
+    Uint32 uniformBuffers)
+{
+    std::string path =
+        std::string(SDL_GetBasePath()) + "shaders/" + filename;
+
+    std::ifstream file(
+        path,
+        std::ios::binary);
+
+    if (!file)
+    {
+        std::cerr
+            << "Failed to open shader: "
+            << path
+            << '\n';
+
+        return nullptr;
+    }
+
+    std::string source(
+        std::istreambuf_iterator<char>(file),
+        {});
+
+    SDL_GPUShaderCreateInfo info{};
+
+    info.code =
+        reinterpret_cast<const Uint8 *>(
+            source.c_str());
+
+    info.code_size =
+        source.size() + 1;
+
+    info.entrypoint =
+        stage == SDL_GPU_SHADERSTAGE_VERTEX
+            ? "vertexMain"
+            : "fragmentMain";
+
+    info.format =
+        SDL_GPU_SHADERFORMAT_MSL;
+
+    info.stage = stage;
+
+    info.num_samplers = 0;
+    info.num_storage_textures = 0;
+    info.num_storage_buffers = 0;
+    info.num_uniform_buffers =
+        uniformBuffers;
+
+    SDL_GPUShader *shader =
+        SDL_CreateGPUShader(
+            device_,
+            &info);
+
+    if (!shader)
+    {
+        std::cerr
+            << "Failed to create shader "
+            << filename
+            << ": "
+            << SDL_GetError()
+            << '\n';
+    }
+
+    return shader;
+}
+
+bool Renderer::createPipeline()
+{
+    static_assert(sizeof(Vec2) == 8);
+    static_assert(sizeof(Color) == 16);
+    static_assert(sizeof(ShapeInstance) == 40);
+
+    SDL_GPUShader *vertexShader =
+        loadShader(
+            "shape.vert.metal",
+            SDL_GPU_SHADERSTAGE_VERTEX,
+            1);
+
+    if (!vertexShader)
+        return false;
+
+    SDL_GPUShader *fragmentShader =
+        loadShader(
+            "shape.frag.metal",
+            SDL_GPU_SHADERSTAGE_FRAGMENT,
+            0);
+
+    if (!fragmentShader)
+    {
+        SDL_ReleaseGPUShader(
+            device_,
+            vertexShader);
+
+        return false;
+    }
+
+    SDL_GPUVertexBufferDescription buffers[2]{};
+
+    buffers[0] = {
+        .slot = 0,
+        .pitch = sizeof(Vec2),
+        .input_rate =
+            SDL_GPU_VERTEXINPUTRATE_VERTEX,
+        .instance_step_rate = 0};
+
+    buffers[1] = {
+        .slot = 1,
+        .pitch = sizeof(ShapeInstance),
+        .input_rate =
+            SDL_GPU_VERTEXINPUTRATE_INSTANCE,
+        .instance_step_rate = 0};
+
+    SDL_GPUVertexAttribute attributes[6]{};
+
+    // quad local position
+    attributes[0] = {
+        .location = 0,
+        .buffer_slot = 0,
+        .format =
+            SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
+        .offset = 0};
+
+    // center
+    attributes[1] = {
+        .location = 1,
+        .buffer_slot = 1,
+        .format =
+            SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
+        .offset =
+            offsetof(
+                ShapeInstance,
+                center)};
+
+    // halfSize
+    attributes[2] = {
+        .location = 2,
+        .buffer_slot = 1,
+        .format =
+            SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
+        .offset =
+            offsetof(
+                ShapeInstance,
+                halfSize)};
+
+    // rotation
+    attributes[3] = {
+        .location = 3,
+        .buffer_slot = 1,
+        .format =
+            SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,
+        .offset =
+            offsetof(
+                ShapeInstance,
+                rotation)};
+
+    // shape type
+    attributes[4] = {
+        .location = 4,
+        .buffer_slot = 1,
+        .format =
+            SDL_GPU_VERTEXELEMENTFORMAT_UINT,
+        .offset =
+            offsetof(
+                ShapeInstance,
+                type)};
+
+    // color
+    attributes[5] = {
+        .location = 5,
+        .buffer_slot = 1,
+        .format =
+            SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+        .offset =
+            offsetof(
+                ShapeInstance,
+                color)};
+
+    SDL_GPUColorTargetDescription target{};
+
+    target.format =
+        targetFormat_;
+
+    target.blend_state.enable_blend =
+        true;
+
+    target.blend_state.src_color_blendfactor =
+        SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+
+    target.blend_state.dst_color_blendfactor =
+        SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+
+    target.blend_state.color_blend_op =
+        SDL_GPU_BLENDOP_ADD;
+
+    target.blend_state.src_alpha_blendfactor =
+        SDL_GPU_BLENDFACTOR_ONE;
+
+    target.blend_state.dst_alpha_blendfactor =
+        SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+
+    target.blend_state.alpha_blend_op =
+        SDL_GPU_BLENDOP_ADD;
+
+    SDL_GPUGraphicsPipelineCreateInfo info{};
+
+    info.vertex_shader =
+        vertexShader;
+
+    info.fragment_shader =
+        fragmentShader;
+
+    info.vertex_input_state = {
+        .vertex_buffer_descriptions =
+            buffers,
+
+        .num_vertex_buffers = 2,
+
+        .vertex_attributes =
+            attributes,
+
+        .num_vertex_attributes = 6};
+
+    info.primitive_type =
+        SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+
+    info.target_info = {
+        .color_target_descriptions =
+            &target,
+
+        .num_color_targets = 1,
+
+        .has_depth_stencil_target =
+            false};
+
+    shapePipeline_ =
+        SDL_CreateGPUGraphicsPipeline(
+            device_,
+            &info);
+
+    SDL_ReleaseGPUShader(
+        device_,
+        vertexShader);
+
+    SDL_ReleaseGPUShader(
+        device_,
+        fragmentShader);
+
+    if (!shapePipeline_)
+    {
+        std::cerr
+            << "Failed to create graphics pipeline: "
+            << SDL_GetError()
+            << '\n';
+
+        return false;
+    }
+
+    return true;
 }
 
 void Renderer::circle(

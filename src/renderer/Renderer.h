@@ -84,4 +84,10 @@ private:
     bool createBuffers();
     bool uploadQuad();
     bool uploadShapes();
+    bool createPipeline();
+
+    SDL_GPUShader *loadShader(
+        const char *path,
+        SDL_GPUShaderStage stage,
+        Uint32 uniformBuffers);
 };

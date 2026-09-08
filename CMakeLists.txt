@@ -23,6 +23,15 @@ file(GLOB_RECURSE SOURCES
 
 add_executable(PhysicsEngine ${SOURCES})
 
+add_custom_command(
+    TARGET PhysicsEngine
+    POST_BUILD
+
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/shaders"
+        "$<TARGET_FILE_DIR:PhysicsEngine>/shaders"
+)
+
 target_include_directories(
     PhysicsEngine
     PRIVATE
