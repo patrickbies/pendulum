@@ -14,77 +14,69 @@ public:
     Renderer() = default;
     ~Renderer();
 
-    bool initialize(SDL_Window* window);
+    bool initialize(SDL_Window *window);
     void shutdown();
 
     bool beginFrame(Color clearColor);
     void endFrame();
 
-    void setCamera(const Camera& camera);
+    void setCamera(const Camera &camera);
 
     void circle(
         Vec2 center,
         float radius,
-        Color color
-    );
+        Color color);
 
     void segment(
         Vec2 start,
         Vec2 end,
         float thickness,
-        Color color
-    );
+        Color color);
 
     void rect(
         Vec2 center,
         Vec2 size,
         float rotation,
-        Color color
-    );
+        Color color);
 
 private:
-    struct CircleInstance
+    enum class ShapeType : uint32_t
     {
-        Vec2 center;
-        float radius;
-        float padding;
-        Color color;
+        Circle,
+        Segment,
+        Rect
     };
 
-    struct SegmentInstance
-    {
-        Vec2 start;
-        Vec2 end;
-
-        float thickness;
-        float padding;
-
-        Color color;
-    };
-
-    struct RectInstance
+    struct ShapeInstance
     {
         Vec2 center;
-        Vec2 size;
+        Vec2 halfSize;
 
         float rotation;
-        float padding;
+        uint32_t type;
 
         Color color;
     };
 
 private:
-    SDL_Window* window_ = nullptr;
-    SDL_GPUDevice* device_ = nullptr;
+    SDL_Window *window_ = nullptr;
+    SDL_GPUDevice *device_ = nullptr;
 
-    SDL_GPUCommandBuffer* commandBuffer_ = nullptr;
-    SDL_GPUTexture* swapchainTexture_ = nullptr;
+    SDL_GPUCommandBuffer *commandBuffer_ = nullptr;
+    SDL_GPUTexture *swapchainTexture_ = nullptr;
+
+    SDL_GPUBuffer *quadBuffer_ = nullptr;
+
+    SDL_GPUBuffer *shapeBuffer_ = nullptr;
+    SDL_GPUTransferBuffer *shapeTransferBuffer_ = nullptr;
+
+    SDL_GPUGraphicsPipeline *shapePipeline_ = nullptr;
+
+    std::size_t shapeCapacity_ = 1024;
 
     Color clearColor_ = Color::black();
 
     Camera camera_;
 
-    std::vector<CircleInstance> circles_;
-    std::vector<SegmentInstance> segments_;
-    std::vector<RectInstance> rects_;
+    std::vector<ShapeInstance> shapes_;
 };

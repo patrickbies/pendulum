@@ -49,9 +49,7 @@ bool Renderer::beginFrame(Color clearColor)
     clearColor_ = clearColor;
 
     // Anything submitted last frame is gone.
-    circles_.clear();
-    segments_.clear();
-    rects_.clear();
+    shapes_.clear();
 
     commandBuffer_ =
         SDL_AcquireGPUCommandBuffer(device_);
@@ -110,10 +108,14 @@ void Renderer::circle(
     float radius,
     Color color)
 {
-    circles_.push_back({.center = center,
-                        .radius = radius,
-                        .padding = 0.0f,
-                        .color = color});
+    if (radius <= 0.0f)
+        return;
+
+    shapes_.push_back({.center = center,
+                       .halfSize = {radius, radius},
+                       .rotation = 0.0f,
+                       .type = static_cast<uint32_t>(ShapeType::Circle),
+                       .color = color});
 }
 
 void Renderer::segment(
@@ -125,11 +127,29 @@ void Renderer::segment(
     if (thickness <= 0.0f)
         return;
 
-    segments_.push_back({.start = start,
-                         .end = end,
-                         .thickness = thickness,
-                         .padding = 0.0f,
-                         .color = color});
+    const float dx = end.x - start.x;
+    const float dy = end.y - start.y;
+
+    const float length =
+        std::sqrt(dx * dx + dy * dy);
+
+    if (length == 0.0f)
+        return;
+
+    const float radius =
+        thickness * 0.5f;
+
+    shapes_.push_back({.center = {
+                           (start.x + end.x) * 0.5f,
+                           (start.y + end.y) * 0.5f},
+
+                       .halfSize = {length * 0.5f + radius, radius},
+
+                       .rotation = std::atan2(dy, dx),
+
+                       .type = static_cast<uint32_t>(ShapeType::Segment),
+
+                       .color = color});
 }
 
 void Renderer::rect(
@@ -141,11 +161,13 @@ void Renderer::rect(
     if (size.x <= 0.0f || size.y <= 0.0f)
         return;
 
-    rects_.push_back({.center = center,
-                      .size = size,
-                      .rotation = rotation,
-                      .padding = 0.0f,
-                      .color = color});
+    shapes_.push_back({.center = center,
+                       .halfSize = {
+                           size.x * 0.5f,
+                           size.y * 0.5f},
+                       .rotation = rotation,
+                       .type = static_cast<uint32_t>(ShapeType::Rect),
+                       .color = color});
 }
 
 void Renderer::endFrame()
