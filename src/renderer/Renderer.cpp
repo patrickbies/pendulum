@@ -7,6 +7,19 @@
 #include <string>
 #include <cstddef>
 
+namespace
+{
+    struct CameraUniform
+    {
+        float centerX;
+        float centerY;
+        float halfWidth;
+        float halfHeight;
+    };
+
+    static_assert(sizeof(CameraUniform) == 16);
+}
+
 bool Renderer::initialize(SDL_Window *window)
 {
     window_ = window;
@@ -202,7 +215,7 @@ SDL_GPUShader *Renderer::loadShader(
 
 bool Renderer::createPipeline()
 {
-    static_assert(sizeof(Vec2) == 8);
+    static_assert(sizeof(Vec2f) == 8);
     static_assert(sizeof(Color) == 16);
     static_assert(sizeof(ShapeInstance) == 40);
 
@@ -234,7 +247,7 @@ bool Renderer::createPipeline()
 
     buffers[0] = {
         .slot = 0,
-        .pitch = sizeof(Vec2),
+        .pitch = sizeof(Vec2f),
         .input_rate =
             SDL_GPU_VERTEXINPUTRATE_VERTEX,
         .instance_step_rate = 0};
@@ -395,7 +408,7 @@ bool Renderer::createPipeline()
 }
 
 void Renderer::circle(
-    Vec2 center,
+    Vec2f center,
     float radius,
     Color color)
 {
@@ -410,8 +423,8 @@ void Renderer::circle(
 }
 
 void Renderer::segment(
-    Vec2 start,
-    Vec2 end,
+    Vec2f start,
+    Vec2f end,
     float thickness,
     Color color)
 {
@@ -444,8 +457,8 @@ void Renderer::segment(
 }
 
 void Renderer::rect(
-    Vec2 center,
-    Vec2 size,
+    Vec2f center,
+    Vec2f size,
     float rotation,
     Color color)
 {
@@ -465,7 +478,7 @@ bool Renderer::createBuffers()
 {
     SDL_GPUBufferCreateInfo quadInfo{};
     quadInfo.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
-    quadInfo.size = sizeof(Vec2) * 6;
+    quadInfo.size = sizeof(Vec2f) * 6;
 
     quadBuffer_ =
         SDL_CreateGPUBuffer(
@@ -537,7 +550,7 @@ bool Renderer::createBuffers()
 
 bool Renderer::uploadQuad()
 {
-    const Vec2 quadVertices[6] = {
+    const Vec2f quadVertices[6] = {
         {-1.0f, -1.0f},
         {1.0f, -1.0f},
         {1.0f, 1.0f},
@@ -766,7 +779,78 @@ void Renderer::endFrame()
         return;
     }
 
-    // rendering will go here
+    if (!shapes_.empty())
+    {
+        int width = 0;
+        int height = 0;
+
+        if (!SDL_GetWindowSizeInPixels(
+                window_,
+                &width,
+                &height) ||
+            height <= 0)
+        {
+            SDL_EndGPURenderPass(renderPass);
+            SDL_CancelGPUCommandBuffer(commandBuffer_);
+
+            commandBuffer_ = nullptr;
+            swapchainTexture_ = nullptr;
+
+            return;
+        }
+
+        const float aspect =
+            static_cast<float>(width) /
+            static_cast<float>(height);
+
+        const float halfHeight =
+            camera_.viewHeight() * 0.5f;
+
+        const float halfWidth =
+            halfHeight * aspect;
+
+        const CameraUniform cameraUniform{
+            .centerX = camera_.position().x,
+            .centerY = camera_.position().y,
+            .halfWidth = halfWidth,
+            .halfHeight = halfHeight};
+
+        // Pipeline determines:
+        // shaders, vertex layout, blending, etc.
+        SDL_BindGPUGraphicsPipeline(
+            renderPass,
+            shapePipeline_);
+
+        // Slot 0 = six quad vertices
+        // Slot 1 = ShapeInstance data
+        const SDL_GPUBufferBinding bindings[2] = {
+            {.buffer = quadBuffer_,
+             .offset = 0},
+            {.buffer = shapeBuffer_,
+             .offset = 0}};
+
+        SDL_BindGPUVertexBuffers(
+            renderPass,
+            0,
+            bindings,
+            2);
+
+        // Your vertex shader's CameraUniform [[buffer(0)]]
+        SDL_PushGPUVertexUniformData(
+            commandBuffer_,
+            0,
+            &cameraUniform,
+            sizeof(cameraUniform));
+
+        // 6 vertices = one quad
+        // N instances = N shapes
+        SDL_DrawGPUPrimitives(
+            renderPass,
+            6,
+            static_cast<Uint32>(shapes_.size()),
+            0,
+            0);
+    }
 
     SDL_EndGPURenderPass(renderPass);
 

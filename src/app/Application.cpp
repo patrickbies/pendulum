@@ -32,15 +32,22 @@ bool Application::initialize()
 
 void Application::run()
 {
+    Camera camera;
+    camera.setViewHeight(10.0f);
+
+    renderer_.setCamera(camera);
+
     while (running_)
     {
         processEvents();
-        if (!renderer_.beginFrame(Color::black()))
+
+        if (!renderer_.beginFrame(
+                Color::black()))
         {
             continue;
         }
 
-        // Render stuff here
+        // render scene here
 
         renderer_.endFrame();
     }

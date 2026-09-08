@@ -23,19 +23,19 @@ public:
     void setCamera(const Camera &camera);
 
     void circle(
-        Vec2 center,
+        Vec2f center,
         float radius,
         Color color);
 
     void segment(
-        Vec2 start,
-        Vec2 end,
+        Vec2f start,
+        Vec2f end,
         float thickness,
         Color color);
 
     void rect(
-        Vec2 center,
-        Vec2 size,
+        Vec2f center,
+        Vec2f size,
         float rotation,
         Color color);
 
@@ -49,8 +49,8 @@ private:
 
     struct ShapeInstance
     {
-        Vec2 center;
-        Vec2 halfSize;
+        Vec2f center;
+        Vec2f halfSize;
 
         float rotation;
         uint32_t type;

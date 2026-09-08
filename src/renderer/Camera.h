@@ -5,7 +5,7 @@
 class Camera
 {
 public:
-    void setPosition(Vec2 position)
+    void setPosition(Vec2f position)
     {
         position_ = position;
     }
@@ -15,7 +15,7 @@ public:
         viewHeight_ = height;
     }
 
-    Vec2 position() const
+    Vec2f position() const
     {
         return position_;
     }
@@ -26,7 +26,7 @@ public:
     }
 
 private:
-    Vec2 position_{0.0f, 0.0f};
+    Vec2f position_{0.0f, 0.0f};
 
     float viewHeight_ = 10.0f;
 };
