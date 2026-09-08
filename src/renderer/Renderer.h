@@ -79,4 +79,9 @@ private:
     Camera camera_;
 
     std::vector<ShapeInstance> shapes_;
+    SDL_GPUTextureFormat targetFormat_{};
+
+    bool createBuffers();
+    bool uploadQuad();
+    bool uploadShapes();
 };
