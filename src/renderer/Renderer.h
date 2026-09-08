@@ -35,6 +35,13 @@ public:
         Color color
     );
 
+    void rect(
+        Vec2 center,
+        Vec2 size,
+        float rotation,
+        Color color
+    );
+
 private:
     struct CircleInstance
     {
@@ -44,6 +51,29 @@ private:
         Color color;
     };
 
+    struct SegmentInstance
+    {
+        Vec2 start;
+        Vec2 end;
+
+        float thickness;
+        float padding;
+
+        Color color;
+    };
+
+    struct RectInstance
+    {
+        Vec2 center;
+        Vec2 size;
+
+        float rotation;
+        float padding;
+
+        Color color;
+    };
+
+private:
     SDL_Window* window_ = nullptr;
     SDL_GPUDevice* device_ = nullptr;
 
@@ -55,4 +85,6 @@ private:
     Camera camera_;
 
     std::vector<CircleInstance> circles_;
+    std::vector<SegmentInstance> segments_;
+    std::vector<RectInstance> rects_;
 };

@@ -2,15 +2,14 @@
 
 #include <iostream>
 
-bool Renderer::initialize(SDL_Window* window)
+bool Renderer::initialize(SDL_Window *window)
 {
     window_ = window;
 
     device_ = SDL_CreateGPUDevice(
         SDL_GPU_SHADERFORMAT_MSL,
         true,
-        nullptr
-    );
+        nullptr);
 
     if (!device_)
     {
@@ -24,8 +23,7 @@ bool Renderer::initialize(SDL_Window* window)
 
     if (!SDL_ClaimWindowForGPUDevice(
             device_,
-            window_
-        ))
+            window_))
     {
         std::cerr
             << "Failed to claim window for GPU device: "
@@ -52,6 +50,8 @@ bool Renderer::beginFrame(Color clearColor)
 
     // Anything submitted last frame is gone.
     circles_.clear();
+    segments_.clear();
+    rects_.clear();
 
     commandBuffer_ =
         SDL_AcquireGPUCommandBuffer(device_);
@@ -73,8 +73,7 @@ bool Renderer::beginFrame(Color clearColor)
             window_,
             &swapchainTexture_,
             nullptr,
-            nullptr
-        ))
+            nullptr))
     {
         std::cerr
             << "Failed to acquire swapchain texture: "
@@ -101,7 +100,7 @@ bool Renderer::beginFrame(Color clearColor)
     return true;
 }
 
-void Renderer::setCamera(const Camera& camera)
+void Renderer::setCamera(const Camera &camera)
 {
     camera_ = camera;
 }
@@ -109,24 +108,44 @@ void Renderer::setCamera(const Camera& camera)
 void Renderer::circle(
     Vec2 center,
     float radius,
-    Color color
-)
+    Color color)
 {
-    circles_.push_back({
-        .center = center,
-        .radius = radius,
-        .padding = 0.0f,
-        .color = color
-    });
+    circles_.push_back({.center = center,
+                        .radius = radius,
+                        .padding = 0.0f,
+                        .color = color});
 }
 
 void Renderer::segment(
     Vec2 start,
     Vec2 end,
     float thickness,
-    Color color
-)
+    Color color)
 {
+    if (thickness <= 0.0f)
+        return;
+
+    segments_.push_back({.start = start,
+                         .end = end,
+                         .thickness = thickness,
+                         .padding = 0.0f,
+                         .color = color});
+}
+
+void Renderer::rect(
+    Vec2 center,
+    Vec2 size,
+    float rotation,
+    Color color)
+{
+    if (size.x <= 0.0f || size.y <= 0.0f)
+        return;
+
+    rects_.push_back({.center = center,
+                      .size = size,
+                      .rotation = rotation,
+                      .padding = 0.0f,
+                      .color = color});
 }
 
 void Renderer::endFrame()
@@ -145,8 +164,7 @@ void Renderer::endFrame()
         clearColor_.r,
         clearColor_.g,
         clearColor_.b,
-        clearColor_.a
-    };
+        clearColor_.a};
 
     colorTarget.load_op =
         SDL_GPU_LOADOP_CLEAR;
@@ -154,13 +172,12 @@ void Renderer::endFrame()
     colorTarget.store_op =
         SDL_GPU_STOREOP_STORE;
 
-    SDL_GPURenderPass* renderPass =
+    SDL_GPURenderPass *renderPass =
         SDL_BeginGPURenderPass(
             commandBuffer_,
             &colorTarget,
             1,
-            nullptr
-        );
+            nullptr);
 
     if (!renderPass)
     {
@@ -206,8 +223,7 @@ void Renderer::shutdown()
     {
         SDL_ReleaseWindowFromGPUDevice(
             device_,
-            window_
-        );
+            window_);
     }
 
     SDL_DestroyGPUDevice(device_);
