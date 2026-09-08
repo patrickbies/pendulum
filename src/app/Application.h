@@ -1,6 +1,6 @@
 #pragma once
 
-#include "renderer/platform/Window.h"
+#include "platform/Window.h"
 #include "renderer/Renderer.h"
 
 #include <memory>

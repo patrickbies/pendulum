@@ -35,7 +35,7 @@ void Application::run()
     while (running_)
     {
         processEvents();
-        if (!renderer_.beginFrame())
+        if (!renderer_.beginFrame(Color::black()))
         {
             continue;
         }

@@ -50,6 +50,8 @@ private:
     SDL_GPUCommandBuffer* commandBuffer_ = nullptr;
     SDL_GPUTexture* swapchainTexture_ = nullptr;
 
+    Color clearColor_ = Color::black();
+
     Camera camera_;
 
     std::vector<CircleInstance> circles_;

@@ -1,4 +1,4 @@
-#include "Renderer.h"
+#include "renderer/Renderer.h"
 
 #include <iostream>
 
@@ -13,46 +13,56 @@ bool Renderer::initialize(SDL_Window* window)
     );
 
     if (!device_)
+    {
+        std::cerr
+            << "Failed to create GPU device: "
+            << SDL_GetError()
+            << '\n';
+
         return false;
+    }
 
     if (!SDL_ClaimWindowForGPUDevice(
             device_,
             window_
         ))
     {
+        std::cerr
+            << "Failed to claim window for GPU device: "
+            << SDL_GetError()
+            << '\n';
+
+        SDL_DestroyGPUDevice(device_);
+        device_ = nullptr;
+
         return false;
     }
 
-    const auto format =
-        SDL_GetGPUSwapchainTextureFormat(
-            device_,
-            window_
-        );
-
-    if (!renderer2D_.initialize(
-            device_,
-            format
-        ))
-    {
-        return false;
-    }
+    std::cout
+        << "GPU backend: "
+        << SDL_GetGPUDeviceDriver(device_)
+        << '\n';
 
     return true;
 }
 
-bool Renderer::beginFrame(
-    const FrameConfig& config
-)
+bool Renderer::beginFrame(Color clearColor)
 {
-    frameConfig_ = config;
+    clearColor_ = clearColor;
+
+    // Anything submitted last frame is gone.
+    circles_.clear();
 
     commandBuffer_ =
-        SDL_AcquireGPUCommandBuffer(
-            device_
-        );
+        SDL_AcquireGPUCommandBuffer(device_);
 
     if (!commandBuffer_)
     {
+        std::cerr
+            << "Failed to acquire GPU command buffer: "
+            << SDL_GetError()
+            << '\n';
+
         return false;
     }
 
@@ -66,43 +76,112 @@ bool Renderer::beginFrame(
             nullptr
         ))
     {
-        SDL_CancelGPUCommandBuffer(
-            commandBuffer_
-        );
+        std::cerr
+            << "Failed to acquire swapchain texture: "
+            << SDL_GetError()
+            << '\n';
+
+        SDL_CancelGPUCommandBuffer(commandBuffer_);
 
         commandBuffer_ = nullptr;
 
         return false;
     }
 
+    // This can happen while the window is minimized.
     if (!swapchainTexture_)
     {
-        SDL_SubmitGPUCommandBuffer(
-            commandBuffer_
-        );
+        SDL_SubmitGPUCommandBuffer(commandBuffer_);
 
         commandBuffer_ = nullptr;
 
         return false;
     }
-
-    // Clears the CPU-side shape queues.
-    renderer2D_.beginFrame();
 
     return true;
 }
 
+void Renderer::setCamera(const Camera& camera)
+{
+    camera_ = camera;
+}
+
+void Renderer::circle(
+    Vec2 center,
+    float radius,
+    Color color
+)
+{
+    circles_.push_back({
+        .center = center,
+        .radius = radius,
+        .padding = 0.0f,
+        .color = color
+    });
+}
+
+void Renderer::segment(
+    Vec2 start,
+    Vec2 end,
+    float thickness,
+    Color color
+)
+{
+}
+
 void Renderer::endFrame()
 {
-    SDL_EndGPURenderPass(
-        renderPass_
-    );
+    if (!commandBuffer_ || !swapchainTexture_)
+    {
+        return;
+    }
 
-    renderPass_ = nullptr;
+    SDL_GPUColorTargetInfo colorTarget{};
 
-    if (!SDL_SubmitGPUCommandBuffer(
-            commandBuffer_
-        ))
+    colorTarget.texture =
+        swapchainTexture_;
+
+    colorTarget.clear_color = {
+        clearColor_.r,
+        clearColor_.g,
+        clearColor_.b,
+        clearColor_.a
+    };
+
+    colorTarget.load_op =
+        SDL_GPU_LOADOP_CLEAR;
+
+    colorTarget.store_op =
+        SDL_GPU_STOREOP_STORE;
+
+    SDL_GPURenderPass* renderPass =
+        SDL_BeginGPURenderPass(
+            commandBuffer_,
+            &colorTarget,
+            1,
+            nullptr
+        );
+
+    if (!renderPass)
+    {
+        std::cerr
+            << "Failed to begin GPU render pass: "
+            << SDL_GetError()
+            << '\n';
+
+        SDL_CancelGPUCommandBuffer(commandBuffer_);
+
+        commandBuffer_ = nullptr;
+        swapchainTexture_ = nullptr;
+
+        return;
+    }
+
+    // rendering will go here
+
+    SDL_EndGPURenderPass(renderPass);
+
+    if (!SDL_SubmitGPUCommandBuffer(commandBuffer_))
     {
         std::cerr
             << "Failed to submit GPU command buffer: "
@@ -117,7 +196,9 @@ void Renderer::endFrame()
 void Renderer::shutdown()
 {
     if (!device_)
+    {
         return;
+    }
 
     SDL_WaitForGPUIdle(device_);
 
