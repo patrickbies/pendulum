@@ -1,9 +1,12 @@
 #pragma once
 
-#include "renderer/FrameConfig.h"
-#include "renderer/renderer2d/Renderer2D.h"
+#include "math/Vec2.h"
+#include "renderer/Camera.h"
+#include "renderer/Color.h"
 
 #include <SDL3/SDL.h>
+
+#include <vector>
 
 class Renderer
 {
@@ -14,22 +17,40 @@ public:
     bool initialize(SDL_Window* window);
     void shutdown();
 
-    bool beginFrame(const FrameConfig& config);
+    bool beginFrame(Color clearColor);
     void endFrame();
 
-    Renderer2D& draw2D()
-    {
-        return renderer2D_;
-    }
+    void setCamera(const Camera& camera);
+
+    void circle(
+        Vec2 center,
+        float radius,
+        Color color
+    );
+
+    void segment(
+        Vec2 start,
+        Vec2 end,
+        float thickness,
+        Color color
+    );
 
 private:
+    struct CircleInstance
+    {
+        Vec2 center;
+        float radius;
+        float padding;
+        Color color;
+    };
+
     SDL_Window* window_ = nullptr;
     SDL_GPUDevice* device_ = nullptr;
 
     SDL_GPUCommandBuffer* commandBuffer_ = nullptr;
     SDL_GPUTexture* swapchainTexture_ = nullptr;
 
-    FrameConfig frameConfig_{};
+    Camera camera_;
 
-    Renderer2D renderer2D_;
+    std::vector<CircleInstance> circles_;
 };

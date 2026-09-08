@@ -2,7 +2,7 @@
 
 #include "math/Vec2.h"
 
-class Camera2D
+class Camera
 {
 public:
     void setPosition(Vec2 position)
