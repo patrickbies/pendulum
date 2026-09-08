@@ -1,4 +1,4 @@
-#include "renderer/platform/Window.h"
+#include "platform/Window.h"
 
 #include <stdexcept>
 #include <string>
