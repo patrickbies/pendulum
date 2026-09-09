@@ -14,6 +14,9 @@ void World::step(double dt)
          iteration < 10;
          ++iteration)
     {
+        if (dragConstraint_)
+            solveDragConstraint(*dragConstraint_);
+
         for (auto &constraint : constraints_)
         {
             Vec2d delta =
@@ -122,4 +125,53 @@ void World::createDistanceConstraint(
     constraint.length = length;
 
     constraints_.push_back(constraint);
+}
+
+// constraint solvers
+void World::solveDragConstraint(
+    const DragConstraint& constraint)
+{
+    Body& body =
+        bodies_[constraint.body];
+
+    if (body.inverseMass == 0.0)
+        return;
+
+    body.position =
+        constraint.target;
+}
+
+void World::beginDrag(Vec2d position)
+{
+    constexpr double pickRadius = 0.25;
+
+    for (BodyId id = 0; id < bodies_.size(); ++id)
+    {
+        const Body &body = bodies_[id];
+
+        if (body.inverseMass == 0.0)
+            continue;
+
+        if (length(body.position - position) <= pickRadius)
+        {
+            dragConstraint_ = DragConstraint{
+                .body = id,
+                .target = position};
+
+            return;
+        }
+
+        bodies_[id].velocity = {0.0, 0.0};
+    }
+}
+
+void World::updateDrag(Vec2d position)
+{
+    if (dragConstraint_)
+        dragConstraint_->target = position;
+}
+
+void World::endDrag()
+{
+    dragConstraint_.reset();
 }

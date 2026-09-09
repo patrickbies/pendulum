@@ -66,6 +66,8 @@ bool Application::initialize()
         return false;
     }
 
+    camera_.setViewHeight(10.0f);
+
     ballScene(world_);
 
     return true;
@@ -73,10 +75,7 @@ bool Application::initialize()
 
 void Application::run()
 {
-    Camera camera;
-    camera.setViewHeight(10.0f);
-
-    renderer_.setCamera(camera);
+    renderer_.setCamera(camera_);
 
     constexpr double physicsDt = 1.0 / 120.0;
     double accumulator = 0.0;
@@ -130,6 +129,41 @@ void Application::processEvents()
         case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
             running_ = false;
             break;
+
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        {
+            if (event.button.button ==
+                SDL_BUTTON_LEFT)
+            {
+                world_.beginDrag(
+                    camera_.mouseWorldPosition(
+                        event.button.x,
+                        event.button.y, 800, 600));
+            }
+
+            break;
+        }
+
+        case SDL_EVENT_MOUSE_MOTION:
+        {
+            world_.updateDrag(
+                camera_.mouseWorldPosition(
+                    event.motion.x,
+                    event.motion.y, 800, 600));
+
+            break;
+        }
+
+        case SDL_EVENT_MOUSE_BUTTON_UP:
+        {
+            if (event.button.button ==
+                SDL_BUTTON_LEFT)
+            {
+                world_.endDrag();
+            }
+
+            break;
+        }
 
         default:
             break;

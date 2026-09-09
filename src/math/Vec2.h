@@ -127,7 +127,9 @@ constexpr Vec2<T> perpendicular(const Vec2<T> &v)
     return {-v.y, v.x};
 }
 
-inline Vec2f toVec2f(const Vec2d &v)
+constexpr Vec2f toVec2f(const Vec2d &v)
 {
-    return {static_cast<float>(v.x), static_cast<float>(v.y)};
+    return {
+        static_cast<float>(v.x),
+        static_cast<float>(v.y)};
 }
