@@ -45,14 +45,14 @@ void cloth(World& world) {
     std::vector<BodyId> pr;
     double gap = 0.6;
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 15; i++) {
         std::vector<BodyId> row;
         BodyId p = -1;
 
-        for (int j = 0; j < 10; j++) {
+        for (int j = 0; j < 15; j++) {
             BodyDef ad;
-            ad.position = {(double) j * gap, (double) i * gap};
-            if (i == 0) {
+            ad.position = {(double) j * gap - 4.5, (double) i * gap - 4.5};
+            if (i == 14) {
                 ad.inverseMass = 0.0;
                 ad.mouseOnly = true;
             }

@@ -146,7 +146,7 @@ void World::solveVelocityConstraint(
     Body &b = bodies_[constraint.bodyB];
 
     Vec2d delta =
-        a.position - b.position;
+        b.position - a.position;
 
     double distance =
         length(delta);
@@ -160,6 +160,9 @@ void World::solveVelocityConstraint(
     double effectiveInverseMass =
         a.inverseMass +
         b.inverseMass;
+
+    if (effectiveInverseMass == 0.0)
+        return;
 
     double lambda =
         -relativeVelocity /
@@ -196,6 +199,9 @@ void World::solvePositionConstraint(
     double inverseMass =
         a.inverseMass +
         b.inverseMass;
+
+    if (inverseMass == 0.0)
+        return;
 
     double lambda =
         -error / inverseMass;

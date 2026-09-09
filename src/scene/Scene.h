@@ -25,7 +25,7 @@ inline void renderWorld(
         renderer.circle(
             {static_cast<float>(body.position.x),
              static_cast<float>(body.position.y)},
-            0.25f,
+            0.2f,
             Color::white());
     }
 
