@@ -10,10 +10,8 @@ struct BodyDef
     Vec2d velocity{0.0, 0.0};
     double angularVelocity = 0.0;
 
-    double mass = 1.0;
+    double inverseMass = 1.0;
     double inertia = 1.0;
-
-    bool isStatic = false;
 };
 
 struct Body
@@ -24,8 +22,6 @@ struct Body
     Vec2d velocity;
     double angularVelocity = 0.0f;
 
-    double mass;
+    double inverseMass;
     double inertia;
-
-    bool isStatic = false;
 };

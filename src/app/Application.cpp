@@ -4,16 +4,43 @@
 #include <SDL3/SDL.h>
 
 #include <iostream>
+#include <chrono>
 
 // temp spot for scenes:
 void ballScene(World &world)
 {
-    BodyDef ball;
+    constexpr double length = 1.5;
 
-    ball.position = {0.0, 3.0};
-    ball.mass = 1.0;
+    BodyDef anchorDef;
+    anchorDef.position = {0.0, 3.0};
+    anchorDef.inverseMass = 0.0;
 
-    world.createBody(ball);
+    const BodyId anchor =
+        world.createBody(anchorDef);
+
+    BodyDef bob1Def;
+    bob1Def.position = {1.0, 2.0};
+    bob1Def.inverseMass = 1.0;
+
+    const BodyId bob1 =
+        world.createBody(bob1Def);
+
+    BodyDef bob2Def;
+    bob2Def.position = {2.0, 1.0};
+    bob2Def.inverseMass = 1.0;
+
+    const BodyId bob2 =
+        world.createBody(bob2Def);
+
+    world.createDistanceConstraint(
+        anchor,
+        bob1,
+        length);
+
+    world.createDistanceConstraint(
+        bob1,
+        bob2,
+        length);
 }
 
 bool Application::initialize()
@@ -39,7 +66,6 @@ bool Application::initialize()
         return false;
     }
 
-    world_ = World();
     ballScene(world_);
 
     return true;
@@ -52,19 +78,38 @@ void Application::run()
 
     renderer_.setCamera(camera);
 
+    constexpr double physicsDt = 1.0 / 120.0;
+    double accumulator = 0.0;
+
+    auto previousTime =
+        std::chrono::steady_clock::now();
+
     while (running_)
     {
         processEvents();
 
-        if (!renderer_.beginFrame(
-                Color::black()))
+        const auto currentTime =
+            std::chrono::steady_clock::now();
+
+        double frameTime =
+            std::chrono::duration<double>(
+                currentTime - previousTime)
+                .count();
+
+        previousTime = currentTime;
+
+        accumulator += frameTime;
+
+        while (accumulator >= physicsDt)
         {
-            continue;
+            world_.step(physicsDt);
+            accumulator -= physicsDt;
         }
 
-        renderWorld(
-            renderer_,
-            world_);
+        if (!renderer_.beginFrame(Color::black()))
+            continue;
+
+        renderWorld(renderer_, world_);
 
         renderer_.endFrame();
     }
