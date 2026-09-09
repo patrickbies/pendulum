@@ -67,6 +67,7 @@ bool Application::initialize()
     }
 
     camera_.setViewHeight(10.0f);
+    renderer_.setCamera(camera_);
 
     ballScene(world_);
 
@@ -75,8 +76,6 @@ bool Application::initialize()
 
 void Application::run()
 {
-    renderer_.setCamera(camera_);
-
     constexpr double physicsDt = 1.0 / 120.0;
     double accumulator = 0.0;
 
