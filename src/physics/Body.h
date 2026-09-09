@@ -19,10 +19,10 @@ struct BodyDef
 struct Body
 {
     Vec2d position;
-    float rotation = 0.0f;
+    double rotation = 0.0f;
 
     Vec2d velocity;
-    float angularVelocity = 0.0f;
+    double angularVelocity = 0.0f;
 
     double mass;
     double inertia;

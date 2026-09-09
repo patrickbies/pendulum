@@ -1,8 +1,20 @@
 #include "app/Application.h"
+#include "scene/renderWorld.h"
 
 #include <SDL3/SDL.h>
 
 #include <iostream>
+
+// temp spot for scenes:
+void ballScene(World &world)
+{
+    BodyDef ball;
+
+    ball.position = {0.0, 3.0};
+    ball.mass = 1.0;
+
+    world.createBody(ball);
+}
 
 bool Application::initialize()
 {
@@ -27,6 +39,9 @@ bool Application::initialize()
         return false;
     }
 
+    world_ = World();
+    ballScene(world_);
+
     return true;
 }
 
@@ -47,7 +62,9 @@ void Application::run()
             continue;
         }
 
-        // render scene here
+        renderWorld(
+            renderer_,
+            world_);
 
         renderer_.endFrame();
     }

@@ -1,11 +1,19 @@
 #include "physics/World.h"
 
-void World::step(float dt)
+void World::step(double dt)
 {
-    for (auto& body : bodies_)
+    for (auto &body : bodies_)
     {
-        body.position += body.velocity * dt;
-        body.rotation += body.angularVelocity * dt;
+        if (body.isStatic)
+            continue;
+
+        body.velocity += gravity_ * dt;
+
+        body.position +=
+            body.velocity * dt;
+
+        body.rotation +=
+            body.angularVelocity * dt;
     }
 }
 
@@ -18,9 +26,9 @@ BodyId World::createBody(const BodyDef &def)
 {
     Body body;
     body.position = def.position;
-    body.rotation = static_cast<float>(def.rotation);
+    body.rotation = def.rotation;
     body.velocity = def.velocity;
-    body.angularVelocity = static_cast<float>(def.angularVelocity);
+    body.angularVelocity = def.angularVelocity;
     body.mass = def.mass;
     body.inertia = def.inertia;
     body.isStatic = def.isStatic;

@@ -2,6 +2,7 @@
 
 #include "platform/Window.h"
 #include "renderer/Renderer.h"
+#include "physics/World.h"
 
 #include <memory>
 
@@ -21,4 +22,6 @@ private:
     std::unique_ptr<Window> window_;
 
     Renderer renderer_;
+
+    World world_;
 };

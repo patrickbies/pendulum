@@ -9,14 +9,19 @@ using BodyId = std::uint32_t;
 class World
 {
 public:
-    BodyId createBody(const BodyDef& def);
+    BodyId createBody(const BodyDef &def);
 
-    void step(float dt);
+    void step(double dt);
 
-    Body& body(BodyId id);
+    Body &body(BodyId id);
+
+    const std::vector<Body> &bodies() const
+    {
+        return bodies_;
+    }
 
 private:
-    Vec2d gravity_{0.0f, -9.81f};
+    Vec2d gravity_{0.0f, -9.81};
 
     std::vector<Body> bodies_;
 };
