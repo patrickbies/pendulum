@@ -5,6 +5,17 @@
 #include "physics/World.h"
 #include "physics/Body.h"
 
+#include <string_view>
+#include <span>
+
+struct Scene
+{
+    std::string_view name;
+    void (*build)(World&);
+};
+
+std::span<const Scene> scenes();
+
 inline void renderWorld(
     Renderer &renderer,
     const World &world)
@@ -21,9 +32,8 @@ inline void renderWorld(
     for (const DistanceConstraint &constraint :
          world.constraints())
     {
-        const Body &a = *constraint.bodyA;
-
-        const Body &b = *constraint.bodyB;
+        const Body &a = world.bodies().at(constraint.bodyA);
+        const Body &b = world.bodies().at(constraint.bodyB);
 
         renderer.segment(
             toVec2f(a.position),

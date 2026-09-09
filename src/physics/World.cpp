@@ -73,7 +73,7 @@ BodyId World::createBody(const BodyDef &def)
     body.rotation = def.rotation;
     body.velocity = def.velocity;
     body.angularVelocity = def.angularVelocity;
-    body.inverseMass = def.inverseMass == 0.0 ? 0.0 : 1.0 / def.inverseMass;
+    body.inverseMass = def.inverseMass;
     body.inertia = def.inertia;
     body.mouseOnly = def.mouseOnly;
 
@@ -87,12 +87,9 @@ void World::createDistanceConstraint(
     BodyId b,
     double length)
 {
-    DistanceConstraint constraint;
-    constraint.bodyA = &bodies_.at(a);
-    constraint.bodyB = &bodies_.at(b);
-    constraint.length = length;
-
-    constraints_.push_back(constraint);
+    constraints_.push_back({.bodyA = a,
+                            .bodyB = b,
+                            .length = length});
 }
 
 // constraint solvers
@@ -102,7 +99,7 @@ void World::solveDragConstraint(
     Body &body =
         bodies_[constraint.body];
 
-    if (body.inverseMass == 0.0  && !body.mouseOnly)
+    if (body.inverseMass == 0.0 && !body.mouseOnly)
         return;
 
     body.position =
@@ -145,8 +142,11 @@ void World::endDrag()
 void World::solveVelocityConstraint(
     DistanceConstraint &constraint)
 {
+    Body &a = bodies_[constraint.bodyA];
+    Body &b = bodies_[constraint.bodyB];
+
     Vec2d delta =
-        constraint.bodyB->position - constraint.bodyA->position;
+        a.position - b.position;
 
     double distance =
         length(delta);
@@ -155,11 +155,11 @@ void World::solveVelocityConstraint(
         delta / distance;
 
     double relativeVelocity =
-        dot(constraint.bodyB->velocity - constraint.bodyA->velocity, n);
+        dot(b.velocity - a.velocity, n);
 
     double effectiveInverseMass =
-        constraint.bodyA->inverseMass +
-        constraint.bodyB->inverseMass;
+        a.inverseMass +
+        b.inverseMass;
 
     double lambda =
         -relativeVelocity /
@@ -168,18 +168,21 @@ void World::solveVelocityConstraint(
     Vec2d impulse =
         lambda * n;
 
-    constraint.bodyA->velocity -=
-        impulse * constraint.bodyA->inverseMass;
+    a.velocity -=
+        impulse * a.inverseMass;
 
-    constraint.bodyB->velocity +=
-        impulse * constraint.bodyB->inverseMass;
+    b.velocity +=
+        impulse * b.inverseMass;
 }
 
 void World::solvePositionConstraint(
     DistanceConstraint &constraint)
 {
+    Body &a = bodies_[constraint.bodyA];
+    Body &b = bodies_[constraint.bodyB];
+
     Vec2d delta =
-        constraint.bodyB->position - constraint.bodyA->position;
+        b.position - a.position;
 
     double distance =
         length(delta);
@@ -191,8 +194,8 @@ void World::solvePositionConstraint(
         distance - constraint.length;
 
     double inverseMass =
-        constraint.bodyA->inverseMass +
-        constraint.bodyB->inverseMass;
+        a.inverseMass +
+        b.inverseMass;
 
     double lambda =
         -error / inverseMass;
@@ -200,9 +203,9 @@ void World::solvePositionConstraint(
     Vec2d correction =
         lambda * n;
 
-    constraint.bodyA->position -=
-        correction * constraint.bodyA->inverseMass;
+    a.position -=
+        correction * a.inverseMass;
 
-    constraint.bodyB->position +=
-        correction * constraint.bodyB->inverseMass;
+    b.position +=
+        correction * b.inverseMass;
 }

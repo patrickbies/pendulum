@@ -6,8 +6,6 @@
 #include "physics/Body.h"
 #include "physics/DistanceConstraint.h"
 
-using BodyId = std::uint32_t;
-
 struct DragConstraint
 {
     BodyId body;

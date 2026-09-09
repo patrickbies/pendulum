@@ -1,48 +1,10 @@
 #include "app/Application.h"
-#include "scene/renderWorld.h"
+#include "scene/Scene.h"
 
 #include <SDL3/SDL.h>
 
 #include <iostream>
 #include <chrono>
-
-// temp spot for scenes:
-void ballScene(World &world)
-{
-    constexpr double length = 1.5;
-
-    BodyDef anchorDef;
-    anchorDef.position = {0.0, 3.0};
-    anchorDef.inverseMass = 0.0;
-    anchorDef.mouseOnly = true;
-
-    const BodyId anchor =
-        world.createBody(anchorDef);
-
-    BodyDef bob1Def;
-    bob1Def.position = {1.0, 2.0};
-    bob1Def.inverseMass = 1.0;
-
-    const BodyId bob1 =
-        world.createBody(bob1Def);
-
-    BodyDef bob2Def;
-    bob2Def.position = {2.0, 1.0};
-    bob2Def.inverseMass = 1.0;
-
-    const BodyId bob2 =
-        world.createBody(bob2Def);
-
-    world.createDistanceConstraint(
-        anchor,
-        bob1,
-        length);
-
-    world.createDistanceConstraint(
-        bob1,
-        bob2,
-        length);
-}
 
 bool Application::initialize()
 {
@@ -70,7 +32,10 @@ bool Application::initialize()
     camera_.setViewHeight(10.0f);
     renderer_.setCamera(camera_);
 
-    ballScene(world_);
+    const Scene &scene =
+        scenes()[1];
+
+    scene.build(world_);
 
     return true;
 }

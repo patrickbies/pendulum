@@ -4,7 +4,7 @@
 
 struct DistanceConstraint
 {
-    Body* bodyA;
-    Body* bodyB;
+    BodyId bodyA;
+    BodyId bodyB;
     double length;
 };

@@ -2,6 +2,8 @@
 
 #include "math/Vec2.h"
 
+using BodyId = std::uint32_t;
+
 struct BodyDef
 {
     Vec2d position{0.0, 0.0};
