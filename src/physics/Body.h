@@ -12,6 +12,8 @@ struct BodyDef
 
     double inverseMass = 1.0;
     double inertia = 1.0;
+
+    bool mouseOnly = false;
 };
 
 struct Body
@@ -24,4 +26,6 @@ struct Body
 
     double inverseMass;
     double inertia;
+
+    bool mouseOnly = false;
 };

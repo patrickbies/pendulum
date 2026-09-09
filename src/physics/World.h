@@ -48,6 +48,8 @@ private:
 
     std::vector<Body> bodies_;
     std::vector<DistanceConstraint> constraints_;
-    
+
     void solveDragConstraint(const DragConstraint &constraint);
+    void solveVelocityConstraint(DistanceConstraint &constraint);
+    void solvePositionConstraint(DistanceConstraint &constraint);
 };

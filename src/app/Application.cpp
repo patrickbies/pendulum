@@ -14,6 +14,7 @@ void ballScene(World &world)
     BodyDef anchorDef;
     anchorDef.position = {0.0, 3.0};
     anchorDef.inverseMass = 0.0;
+    anchorDef.mouseOnly = true;
 
     const BodyId anchor =
         world.createBody(anchorDef);

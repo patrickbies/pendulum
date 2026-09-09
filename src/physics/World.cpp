@@ -4,49 +4,19 @@ void World::step(double dt)
 {
     for (Body &body : bodies_)
     {
-        if (body.inverseMass == 0.0)
+        if (body.inverseMass == 0.0 || body.mouseOnly)
             continue;
 
         body.velocity += gravity_ * dt;
     }
 
     for (int iteration = 0;
-         iteration < 10;
+         iteration < 20;
          ++iteration)
     {
-        if (dragConstraint_)
-            solveDragConstraint(*dragConstraint_);
-
         for (auto &constraint : constraints_)
         {
-            Vec2d delta =
-                constraint.bodyB->position - constraint.bodyA->position;
-
-            double distance =
-                length(delta);
-
-            Vec2d n =
-                delta / distance;
-
-            double relativeVelocity =
-                dot(constraint.bodyB->velocity - constraint.bodyA->velocity, n);
-
-            double effectiveInverseMass =
-                constraint.bodyA->inverseMass +
-                constraint.bodyB->inverseMass;
-
-            double lambda =
-                -relativeVelocity /
-                effectiveInverseMass;
-
-            Vec2d impulse =
-                lambda * n;
-
-            constraint.bodyA->velocity -=
-                impulse * constraint.bodyA->inverseMass;
-
-            constraint.bodyB->velocity +=
-                impulse * constraint.bodyB->inverseMass;
+            solveVelocityConstraint(constraint);
         }
     }
 
@@ -62,35 +32,32 @@ void World::step(double dt)
             body.angularVelocity * dt;
     }
 
-    for (auto &constraint : constraints_)
+    std::vector<Vec2d> predictedPositions;
+    predictedPositions.reserve(bodies_.size());
+
+    for (const Body &body : bodies_)
+        predictedPositions.push_back(body.position);
+
+    for (int iteration = 0; iteration < 20; ++iteration)
     {
-        Vec2d delta =
-            constraint.bodyB->position - constraint.bodyA->position;
+        if (dragConstraint_)
+            solveDragConstraint(*dragConstraint_);
 
-        double distance =
-            length(delta);
+        for (auto &constraint : constraints_)
+        {
+            solvePositionConstraint(constraint);
+        }
+    }
 
-        Vec2d n =
-            delta / distance;
+    for (std::size_t i = 0; i < bodies_.size(); ++i)
+    {
+        Body &body = bodies_[i];
 
-        double error =
-            distance - constraint.length;
+        if (body.inverseMass == 0.0)
+            continue;
 
-        double inverseMass =
-            constraint.bodyA->inverseMass +
-            constraint.bodyB->inverseMass;
-
-        double lambda =
-            -error / inverseMass;
-
-        Vec2d correction =
-            lambda * n;
-
-        constraint.bodyA->position -=
-            correction * constraint.bodyA->inverseMass;
-
-        constraint.bodyB->position +=
-            correction * constraint.bodyB->inverseMass;
+        body.velocity +=
+            (body.position - predictedPositions[i]) / dt;
     }
 }
 
@@ -108,6 +75,7 @@ BodyId World::createBody(const BodyDef &def)
     body.angularVelocity = def.angularVelocity;
     body.inverseMass = def.inverseMass == 0.0 ? 0.0 : 1.0 / def.inverseMass;
     body.inertia = def.inertia;
+    body.mouseOnly = def.mouseOnly;
 
     bodies_.push_back(body);
 
@@ -129,12 +97,12 @@ void World::createDistanceConstraint(
 
 // constraint solvers
 void World::solveDragConstraint(
-    const DragConstraint& constraint)
+    const DragConstraint &constraint)
 {
-    Body& body =
+    Body &body =
         bodies_[constraint.body];
 
-    if (body.inverseMass == 0.0)
+    if (body.inverseMass == 0.0  && !body.mouseOnly)
         return;
 
     body.position =
@@ -149,19 +117,17 @@ void World::beginDrag(Vec2d position)
     {
         const Body &body = bodies_[id];
 
-        if (body.inverseMass == 0.0)
+        if (body.inverseMass == 0.0 && !body.mouseOnly)
             continue;
 
         if (length(body.position - position) <= pickRadius)
         {
             dragConstraint_ = DragConstraint{
                 .body = id,
-                .target = position};
+                .target = body.position};
 
             return;
         }
-
-        bodies_[id].velocity = {0.0, 0.0};
     }
 }
 
@@ -174,4 +140,69 @@ void World::updateDrag(Vec2d position)
 void World::endDrag()
 {
     dragConstraint_.reset();
+}
+
+void World::solveVelocityConstraint(
+    DistanceConstraint &constraint)
+{
+    Vec2d delta =
+        constraint.bodyB->position - constraint.bodyA->position;
+
+    double distance =
+        length(delta);
+
+    Vec2d n =
+        delta / distance;
+
+    double relativeVelocity =
+        dot(constraint.bodyB->velocity - constraint.bodyA->velocity, n);
+
+    double effectiveInverseMass =
+        constraint.bodyA->inverseMass +
+        constraint.bodyB->inverseMass;
+
+    double lambda =
+        -relativeVelocity /
+        effectiveInverseMass;
+
+    Vec2d impulse =
+        lambda * n;
+
+    constraint.bodyA->velocity -=
+        impulse * constraint.bodyA->inverseMass;
+
+    constraint.bodyB->velocity +=
+        impulse * constraint.bodyB->inverseMass;
+}
+
+void World::solvePositionConstraint(
+    DistanceConstraint &constraint)
+{
+    Vec2d delta =
+        constraint.bodyB->position - constraint.bodyA->position;
+
+    double distance =
+        length(delta);
+
+    Vec2d n =
+        delta / distance;
+
+    double error =
+        distance - constraint.length;
+
+    double inverseMass =
+        constraint.bodyA->inverseMass +
+        constraint.bodyB->inverseMass;
+
+    double lambda =
+        -error / inverseMass;
+
+    Vec2d correction =
+        lambda * n;
+
+    constraint.bodyA->position -=
+        correction * constraint.bodyA->inverseMass;
+
+    constraint.bodyB->position +=
+        correction * constraint.bodyB->inverseMass;
 }
